@@ -1,0 +1,28 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# model weights
+*.pt
+*.bin
+*.safetensors
+
+# samples / generated artifacts
+samples/*.mp4
+samples/*.avi
+samples/*.png
+samples/demo_run.log
+reports/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

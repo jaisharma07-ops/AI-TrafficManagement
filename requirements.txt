@@ -1,0 +1,31 @@
+# Forensic AI - CPU-only requirements (Windows / Python 3.10)
+# For CUDA / Colab variant see notebooks/colab_full_quality.ipynb
+
+# --- Core deep-learning stack (CPU wheels) ---
+# Install torch from the CPU index:
+#   pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1
+torchvision==0.18.1
+
+# --- VLM + tokenizers ---
+transformers==4.44.2
+accelerate==0.33.0
+einops==0.8.0
+pyvips-binary; platform_system == "Windows"
+
+# --- Object detection ---
+ultralytics==8.2.103
+
+# --- Video / image ---
+opencv-python==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4
+
+# --- Tracking math ---
+scipy==1.13.1
+
+# --- UI ---
+streamlit==1.38.0
+
+# --- Dev / tests ---
+pytest==8.3.3
