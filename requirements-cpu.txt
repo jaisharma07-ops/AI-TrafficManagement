@@ -1,0 +1,21 @@
+# Forensic AI - CPU-only fallback requirements.
+# Use only if you have no NVIDIA GPU; the GPU build (requirements.txt) is
+# strongly preferred — Moondream2 in fp16 on a 6 GB+ NVIDIA card is
+# 15-30x faster than fp32 CPU.
+#
+# Install order:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.3.1 torchvision==0.18.1
+#   pip install -r requirements-cpu.txt
+
+transformers==4.44.2
+accelerate==0.33.0
+einops==0.8.0
+pyvips-binary; platform_system == "Windows"
+
+ultralytics==8.2.103
+opencv-python==4.10.0.84
+Pillow==10.4.0
+numpy==1.26.4
+scipy==1.13.1
+streamlit==1.38.0
+pytest==8.3.3

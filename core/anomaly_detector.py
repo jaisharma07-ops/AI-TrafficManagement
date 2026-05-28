@@ -270,7 +270,9 @@ class AnomalyDetector:
             return []
         results = self._yolo.predict(
             frame_bgr, verbose=False, classes=None,
-            imgsz=640, conf=0.35,
+            imgsz=config.YOLO_IMGSZ, conf=0.35,
+            device=0 if config.ON_GPU else "cpu",
+            half=config.ON_GPU,  # fp16 inference on GPU
         )
         out: List[Detection] = []
         for r in results:

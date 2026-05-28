@@ -1,0 +1,3 @@
+label: Sample short MP4 (Wikimedia mirror)
+url: https://download.samplelib.com/mp4/sample-5s.mp4
+license: Sample Lib - free for any use

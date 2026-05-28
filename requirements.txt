@@ -1,11 +1,20 @@
-# Forensic AI - CPU-only requirements (Windows / Python 3.10)
-# For CUDA / Colab variant see notebooks/colab_full_quality.ipynb
+# Forensic AI - Windows / Python 3.10 or 3.11
+# Default: GPU build (CUDA 12.8 wheels - required for RTX 50-series Blackwell sm_120).
+# For CPU-only, see requirements-cpu.txt.
+#
+# Install order (PowerShell or bash):
+#   pip install --index-url https://download.pytorch.org/whl/cu128 torch==2.7.0 torchvision==0.22.0
+#   pip install -r requirements.txt
+#
+# RTX 50-series notes:
+#   - RTX 5060 / 5070 / 5080 / 5090 are Blackwell (compute capability sm_120).
+#   - PyTorch CUDA 12.1 / 12.4 wheels do NOT include sm_120 kernels and will
+#     fall back to CPU or crash with "no kernel image is available".
+#   - Use the cu128 (or newer) index URL above. torch >= 2.7 is required.
 
-# --- Core deep-learning stack (CPU wheels) ---
-# Install torch from the CPU index:
-#   pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
-torch==2.3.1
-torchvision==0.18.1
+# --- Core deep-learning stack (do NOT pin torch here; install from cu128 index above) ---
+# torch / torchvision are intentionally omitted so this file can be re-run
+# without clobbering the manually-installed CUDA build.
 
 # --- VLM + tokenizers ---
 transformers==4.44.2

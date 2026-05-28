@@ -148,10 +148,11 @@ class VLMEngine:
     def __init__(self,
                  model_name: str = config.VLM_MODEL,
                  revision: str = config.VLM_REVISION,
-                 device: str = "cpu"):
+                 device: Optional[str] = None):
         self.model_name = model_name
         self.revision = revision
-        self.device = device
+        # Default to whatever config detected (cuda / cpu).
+        self.device = device or config.DEVICE
         self._model = None
         self._tokenizer = None
         self._fallback: Optional[_HeuristicVLM] = None
@@ -166,8 +167,15 @@ class VLMEngine:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
-            log.info("Loading VLM weights: %s (revision=%s)",
-                     self.model_name, self.revision)
+            # Pick dtype: fp16 on GPU (fits Moondream2 in ~3.7 GB VRAM,
+            # ~15-30x faster than fp32 CPU); fp32 on CPU for numerical stability.
+            use_cuda = self.device == "cuda" and torch.cuda.is_available()
+            torch_dtype = torch.float16 if use_cuda else torch.float32
+
+            log.info("Loading VLM weights: %s (revision=%s) device=%s dtype=%s",
+                     self.model_name, self.revision,
+                     "cuda" if use_cuda else "cpu",
+                     "float16" if use_cuda else "float32")
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name, revision=self.revision,
                 trust_remote_code=True,
@@ -175,8 +183,13 @@ class VLMEngine:
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_name, revision=self.revision,
                 trust_remote_code=True,
-                torch_dtype=torch.float32,  # fp32 is more reliable on CPU
+                torch_dtype=torch_dtype,
             )
+            if use_cuda:
+                self._model = self._model.to("cuda")
+                self.device = "cuda"
+            else:
+                self.device = "cpu"
             self._model.eval()
         except Exception as e:                                # noqa: BLE001
             log.warning("VLM load failed (%s) - using heuristic fallback", e)
@@ -193,25 +206,36 @@ class VLMEngine:
     def _ask(self, image: Image.Image, prompt: str) -> str:
         """One inference call. Moondream2-specific path with a tolerant fallback."""
         assert self._model is not None and self._tokenizer is not None
+        import torch
         # Moondream2 ships its own answer_question helper via trust_remote_code.
         if hasattr(self._model, "answer_question"):
-            return self._model.answer_question(
-                self._model.encode_image(image),
-                prompt,
-                self._tokenizer,
-                max_new_tokens=config.VLM_MAX_NEW_TOKENS,
-            )
+            with torch.inference_mode():
+                return self._model.answer_question(
+                    self._model.encode_image(image),
+                    prompt,
+                    self._tokenizer,
+                    max_new_tokens=config.VLM_MAX_NEW_TOKENS,
+                )
         # Generic transformers fallback (unlikely to be hit for moondream2)
         from transformers import pipeline
+        device_arg = 0 if self.device == "cuda" else -1
         pipe = pipeline("image-text-to-text", model=self._model,
-                        tokenizer=self._tokenizer)
+                        tokenizer=self._tokenizer, device=device_arg)
         out = pipe(image, prompt, max_new_tokens=config.VLM_MAX_NEW_TOKENS)
         if isinstance(out, list) and out:
             return str(out[0].get("generated_text", ""))
         return str(out)
 
     def analyze_window(self, frames: List[FrameSample]) -> Dict[str, Any]:
-        """Run the forensic prompt over the keyframes; return validated dict."""
+        """Run forensic analysis over the keyframes; return validated dict.
+
+        Strategy: small VLMs like Moondream2 (1.8B) are unreliable at
+        free-form schema generation, so we (1) try a single strict-JSON
+        prompt first, and (2) fall back to a series of focused
+        single-answer questions and assemble the JSON ourselves. This is
+        slower (~5 calls) but produces a populated report instead of an
+        empty one.
+        """
         self.load()
         if self._fallback is not None:
             return self._fallback.analyze_window(frames)
@@ -219,30 +243,109 @@ class VLMEngine:
         if not frames:
             return _coerce_to_schema({})
 
-        # Compose a multi-frame prompt: send the middle keyframe (best
-        # representative) + ask the model to imagine the chronology.
-        # (Moondream is single-image; multi-image would mean multi-call.)
+        # Send the middle keyframe (best representative of the incident).
         mid = frames[len(frames) // 2]
         image = mid.to_pil()
 
-        # Two attempts: stricter on retry
-        for attempt, prompt in enumerate([
-            _FORENSIC_PROMPT,
-            _FORENSIC_PROMPT + "\n\nReply with ONLY a single JSON object. "
-                               "Do not write any text before or after.",
-        ]):
-            raw = self._ask(image, prompt)
-            obj = parse_forensic_json(raw)
-            if obj is not None and _REQUIRED_KEYS.intersection(obj.keys()):
-                return _coerce_to_schema(obj)
-            log.warning("VLM JSON parse failed on attempt %d; raw=%r",
-                        attempt + 1, raw[:200])
+        # Pre-encode the image once — Moondream2 reuses the embedding across
+        # calls, which is the main GPU-side cost.
+        try:
+            encoded = self._model.encode_image(image)
+        except Exception as e:                              # noqa: BLE001
+            log.warning("encode_image failed (%s) - falling back to per-call", e)
+            encoded = None
 
-        # Final fallback: wrap free text into the schema
-        log.warning("VLM JSON parse failed twice; degrading to free-text report")
+        def ask_short(question: str, max_tokens: int = 96) -> str:
+            try:
+                import torch
+                if encoded is not None and hasattr(self._model, "answer_question"):
+                    with torch.inference_mode():
+                        out = self._model.answer_question(
+                            encoded, question, self._tokenizer,
+                            max_new_tokens=max_tokens,
+                        )
+                    return (out or "").strip()
+                # Fallback path
+                return self._ask(image, question).strip()
+            except Exception as e:                          # noqa: BLE001
+                log.warning("VLM ask failed for %r: %s", question[:60], e)
+                return ""
+
+        # --- Attempt 1: one-shot strict JSON ---
+        strict = (
+            _FORENSIC_PROMPT
+            + "\n\nReply with ONLY one JSON object. No prose, no code fences."
+        )
+        raw = ask_short(strict, max_tokens=config.VLM_MAX_NEW_TOKENS)
+        obj = parse_forensic_json(raw)
+        if obj is not None and len(_REQUIRED_KEYS.intersection(obj.keys())) >= 3:
+            return _coerce_to_schema(obj)
+        log.info("Strict-JSON path didn't yield a parseable object; "
+                 "switching to multi-query mode.")
+
+        # --- Attempt 2: structured Q&A, assembled into the schema ---
+        scene = ask_short(
+            "Describe what is happening in this traffic-camera frame in two "
+            "factual sentences. Mention vehicles, road type, and any "
+            "apparent collision or unusual behavior.",
+            max_tokens=160,
+        )
+        vehicles_raw = ask_short(
+            "List every vehicle visible in this frame as 'color type' "
+            "(e.g. 'red sedan', 'white van'), separated by commas. "
+            "Only the list, no other words.",
+            max_tokens=80,
+        )
+        events_raw = ask_short(
+            "What sequence of events likely happened just before and after "
+            "this moment? Answer as 2 to 4 short past-tense sentences "
+            "separated by ' | '. Do not number them.",
+            max_tokens=160,
+        )
+        cause = ask_short(
+            "In one sentence, what is the most likely cause of the incident "
+            "in this frame? Be objective; if unclear, say 'unclear'.",
+            max_tokens=80,
+        )
+        violations_raw = ask_short(
+            "List any traffic violations visible in this frame "
+            "(e.g. 'failure to yield', 'running red light'), separated by "
+            "commas. If none are visible, answer exactly: none.",
+            max_tokens=64,
+        )
+        fault = ask_short(
+            "Which vehicle appears to be at fault in this frame? Answer "
+            "with a short phrase like 'red sedan' or exactly 'unclear'.",
+            max_tokens=32,
+        )
+
+        def split_csv(s: str) -> List[str]:
+            if not s:
+                return []
+            cleaned = s.strip().rstrip(".").lower()
+            if cleaned in {"none", "n/a", "unclear", "no violations"}:
+                return []
+            return [x.strip() for x in re.split(r"[,;]", s) if x.strip()]
+
+        def split_events(s: str) -> List[str]:
+            if not s:
+                return []
+            parts = re.split(r"\s*\|\s*|(?<=[.!?])\s+(?=[A-Z])", s)
+            return [p.strip().rstrip(".") + "." for p in parts if p.strip()]
+
+        # Heuristic confidence: more populated fields → higher confidence.
+        populated = sum(1 for x in (scene, vehicles_raw, events_raw, cause)
+                        if x and len(x) > 5)
+        confidence = "high" if populated >= 4 else "medium" if populated >= 2 else "low"
+
         return _coerce_to_schema({
-            "scene_description": raw if isinstance(raw, str) else "",
-            "confidence": "low",
+            "scene_description": scene or "(VLM did not produce a description)",
+            "vehicles_involved": split_csv(vehicles_raw),
+            "sequence_of_events": split_events(events_raw),
+            "probable_cause": cause or "unclear",
+            "violations_observed": split_csv(violations_raw),
+            "at_fault": (fault.strip().rstrip(".") or "unclear"),
+            "confidence": confidence,
         })
 
     def describe_frame(self, frame: FrameSample) -> str:
