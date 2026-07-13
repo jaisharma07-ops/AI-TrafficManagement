@@ -110,7 +110,9 @@ The platform is engineered using a robust, decoupled frontend architecture desig
 
 ---
 
-## ⚡ Getting Started
+
+
+## Getting Started
 
 Follow these steps to spin up a local development environment.
 
