@@ -8,6 +8,8 @@ A multimodal AI pipeline designed to ingest raw traffic footage, detect road ano
 
 ---
 
+
+
 ## 🛠️ System Architecture
 
 The pipeline processes video streams sequentially, offloading heavy VLM reasoning to an event-driven trigger system to maximize runtime efficiency:
