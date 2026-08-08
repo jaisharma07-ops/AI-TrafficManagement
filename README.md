@@ -40,6 +40,8 @@ python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
 # Install PyTorch CPU wheels & dependencies
+
+
 pip install --index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu) torch==2.3.1 torchvision==0.18.1
 pip install -r requirements.txt
 forensic-ai/
