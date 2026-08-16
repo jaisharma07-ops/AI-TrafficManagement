@@ -5,7 +5,6 @@
 [![PRD Compliant](https://img.shields.io/badge/PRD-Compliant-success)](PRD.md)
 
 A multimodal AI pipeline designed to ingest raw traffic footage, detect road anomalies via computer vision, reconstruct incidents using lightweight Vision-Language Models (VLMs), and automatically generate legally binding insurance reports and fault-assessment summaries.
-
 ---
 ## 🛠️ System Architecture
 
@@ -35,7 +34,6 @@ python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
 # Install PyTorch CPU wheels & dependencies
-
 
 pip install --index-url [https://download.pytorch.org/whl/cpu](https://download.pytorch.org/whl/cpu) torch==2.3.1 torchvision==0.18.1
 pip install -r requirements.txt
