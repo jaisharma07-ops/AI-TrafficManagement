@@ -7,12 +7,7 @@
 A multimodal AI pipeline designed to ingest raw traffic footage, detect road anomalies via computer vision, reconstruct incidents using lightweight Vision-Language Models (VLMs), and automatically generate legally binding insurance reports and fault-assessment summaries.
 
 ---
-
-
-
 ## 🛠️ System Architecture
-
-
 
 The pipeline processes video streams sequentially, offloading heavy VLM reasoning to an event-driven trigger system to maximize runtime efficiency:
 
@@ -81,9 +76,7 @@ forensic-ai/
 
   [Explore the Platform](https://mech-verse.vercel.app/) • [Report Bug](https://github.com/your-username/mech-verse/issues) • [Request Feature](https://github.com/your-username/mech-verse/issues)
 </div>
-
 ---
-
 ## 🌌 Overview
 
 Mech-Verse redefines how complex technical portfolios and engineering assets are experienced on the web. Engineered with a premium, low-friction, dark-matte aesthetic and cinematic motion design, the platform serves as a modern digital twin hub for high-performance vehicle dynamics, computer-aided design (CAD) architectures, and structural analysis data visualizations.
@@ -114,11 +107,7 @@ The platform is engineered using a robust, decoupled frontend architecture desig
 *   **Premium Visual Framework:** Hyper-modern, high-contrast dark UI featuring subtle aerodynamic neon accents and a carbon-fiber-inspired asset matrix layout.
 *   **Engineering Modules Container:** Custom-built components ready to ingest and visualize real-world physical dynamics and multi-body physics simulation data.
 *   **Zero-Lag Fluidity:** Optimized route-handling and state distribution ensure instant page transitions and seamless interaction on both mobile and desktop views.
-
 ---
-
-
-
 ## Getting Started
 
 Follow these steps to spin up a local development environment.
