@@ -86,7 +86,6 @@ Mech-Verse redefines how complex technical portfolios and engineering assets are
 
 ---
 
-
 ## 🛠️ Architecture & Tech Stack
 
 The platform is engineered using a robust, decoupled frontend architecture designed for optimal performance, type-safety, and fluid layout rendering.
