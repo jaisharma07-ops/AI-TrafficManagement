@@ -11,6 +11,8 @@ A multimodal AI pipeline designed to ingest raw traffic footage, detect road ano
 The pipeline processes video streams sequentially, offloading heavy VLM reasoning to an event-driven trigger system to maximize runtime efficiency:
 
 ```mermaid
+
+
 graph TD
     A[Raw Video Upload] --> B[Frame Iterator cv2]
     B --> C[YOLOv8n Anomaly Engine]
@@ -86,6 +88,7 @@ Mech-Verse redefines how complex technical portfolios and engineering assets are
 
 ---
 
+
 ## 🛠️ Architecture & Tech Stack
 
 The platform is engineered using a robust, decoupled frontend architecture designed for optimal performance, type-safety, and fluid layout rendering.
@@ -98,6 +101,7 @@ The platform is engineered using a robust, decoupled frontend architecture desig
 | **Hosting & CI/CD**| `Vercel` | Edge network distribution, instant deployments, and automated pipelines. |
 
 ---
+
 
 ## 🚀 Key Features
 
