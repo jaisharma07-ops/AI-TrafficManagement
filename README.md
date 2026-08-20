@@ -108,9 +108,7 @@ The platform is engineered using a robust, decoupled frontend architecture desig
 Follow these steps to spin up a local development environment.
 
 ### Prerequisites
-
 Ensure you have Node.js installed (v18.x or higher recommended) along with a package manager (`npm`, `pnpm`, or `yarn`).
-
 ```bash
 # Verify Node.js version
 node -v
