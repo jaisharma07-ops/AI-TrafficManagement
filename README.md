@@ -4,9 +4,14 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PRD Compliant](https://img.shields.io/badge/PRD-Compliant-success)](PRD.md)
 
+
+
 A multimodal AI pipeline designed to ingest raw traffic footage, detect road anomalies via computer vision, reconstruct incidents using lightweight Vision-Language Models (VLMs), and automatically generate legally binding insurance reports and fault-assessment summaries.
+
+
 ---
 ## 🛠️ System Architecture
+
 
 The pipeline processes video streams sequentially, offloading heavy VLM reasoning to an event-driven trigger system to maximize runtime efficiency:
 
